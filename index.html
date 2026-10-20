@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard WiFi Pamplonita</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--or:#eb7711;--or-d:#c9600a;--ve:#078930;--az:#0f47af;--bg:#f4f6f9;--card:#fff;--tx:#1f2d3d;--mut:#6b7a8c;--bd:#e6eaf0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--az);outline-offset:2px}
+.container{max-width:1280px;margin:0 auto;padding:20px}
+/* Login */
+#loginOverlay{position:fixed;inset:0;background:rgba(15,25,40,.88);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.login-card{background:#fff;padding:36px;border-radius:16px;width:100%;max-width:380px;text-align:center}
+.login-card h2{color:var(--or);font-size:1.3rem;margin-bottom:6px}
+.login-card p{color:var(--mut);margin-bottom:22px}
+.login-card input{width:100%;padding:13px;margin-bottom:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:1rem}
+.login-card input:focus{border-color:var(--or);outline:none}
+.login-card button{width:100%;padding:13px;background:var(--or);border:0;border-radius:10px;color:#fff;font-weight:700;cursor:pointer}
+.login-card button:hover:not(:disabled){background:var(--or-d)}
+.login-card button:disabled{background:#ccc;cursor:not-allowed}
+#loginError{color:#c62828;font-size:.85rem;margin-top:10px;min-height:18px}
+/* Header */
+#dashboardContent{display:none}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.top h1{font-size:1.45rem;color:var(--or);font-weight:800}
+.top small{display:block;color:var(--mut);font-weight:500;font-size:.8rem;margin-top:2px}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:#fff;border:1px solid var(--bd);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{background:#f0f3f7}
+.btn.pri{background:var(--or);border-color:var(--or);color:#fff}.btn.pri:hover{background:var(--or-d)}
+select.btn{padding-right:8px}
+.live{font-size:.78rem;font-weight:600;color:var(--ve);background:#e8f5e9;padding:7px 12px;border-radius:20px}
+.live.off{color:#c62828;background:#fdecea}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;border-left:4px solid var(--or)}
+.kpi.v{border-left-color:var(--ve)}.kpi.a{border-left-color:var(--az)}
+.kpi .l{font-size:.78rem;color:var(--mut);font-weight:600}
+.kpi .n{font-size:1.9rem;font-weight:800;margin-top:4px;line-height:1.15;overflow-wrap:anywhere}
+.kpi .n.s{font-size:1.25rem;padding-top:6px}
+.kpi .d{font-size:.78rem;margin-top:4px;color:var(--mut)}
+.up{color:var(--ve)}.down{color:#c62828}
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;min-width:0}
+.card h3{font-size:.95rem;font-weight:700}
+.card .sub{font-size:.76rem;color:var(--mut);margin:2px 0 10px}
+.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+@media(max-width:900px){.c4,.c5,.c6,.c7,.c8{grid-column:span 12}}
+.cv{position:relative;height:250px}
+/* Chips */
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;min-height:0}
+.chip{background:#fff3e6;color:var(--or-d);border:1px solid #f7c999;border-radius:16px;padding:4px 6px 4px 12px;font-size:.78rem;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.chip button{border:0;background:none;cursor:pointer;font-size:1rem;line-height:1;color:inherit}
+/* Table */
+.thead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.thead input{padding:8px 12px;border:1px solid var(--bd);border-radius:8px;min-width:240px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 8px;border-bottom:2px solid var(--bd);color:var(--mut);font-size:.78rem;font-weight:700;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--tx)}
+th .ar{color:var(--or)}
+td{padding:10px 8px;border-bottom:1px solid #f0f2f5}
+tbody tr{cursor:pointer}tbody tr:hover{background:#fff8f0}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.76rem}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.74rem;font-weight:600}
+.t-femenino{background:#fce4ec;color:#c62828}.t-masculino{background:#e3f2fd;color:#1565c0}.t-otro{background:#f3e5f5;color:#6a1b9a}
+.empty{text-align:center;color:var(--mut);padding:36px 8px}
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:.82rem;color:var(--mut);gap:8px;flex-wrap:wrap}
+.pager div{display:flex;gap:6px}
+.pager .btn:disabled{opacity:.45;cursor:not-allowed}
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(15,25,40,.6);display:none;align-items:center;justify-content:center;z-index:900;padding:16px}
+#modal.on{display:flex}
+.mbox{background:#fff;border-radius:14px;max-width:460px;width:100%;padding:22px;max-height:90vh;overflow:auto}
+.mbox h3{font-size:1.1rem;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.mbox dl{display:grid;grid-template-columns:120px 1fr;gap:9px 12px}
+.mbox dt{color:var(--mut);font-weight:600}.mbox dd{overflow-wrap:anywhere}
+.mbox .hist{margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);color:var(--mut);font-size:.84rem}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <h2>Acceso restringido</h2>
+    <p>Ingresa tus credenciales de administrador</p>
+    <input type="email" id="loginEmail" placeholder="Correo electrónico" autocomplete="username">
+    <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password">
+    <button id="loginBtn">Ingresar</button>
+    <div id="loginError" role="alert"></div>
+  </div>
+</div>
+
+<div id="dashboardContent" class="container">
+  <div class="top">
+    <h1>WiFi Pamplonita<small>Registro de conexiones y perfil de visitantes</small></h1>
+    <div class="tools">
+      <span class="live" id="liveBadge">Conectando…</span>
+      <select class="btn" id="periodo" aria-label="Periodo">
+        <option value="1">Hoy</option><option value="7">Últimos 7 días</option>
+        <option value="15" selected>Últimos 15 días</option><option value="30">Últimos 30 días</option>
+        <option value="0">Todo el historial</option>
+      </select>
+      <button class="btn pri" id="btnCsv">Exportar CSV</button>
+      <button class="btn" id="btnOut">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Conexiones en el periodo</div><div class="n" id="kTotal">0</div><div class="d" id="kDelta">&nbsp;</div></div>
+    <div class="kpi v"><div class="l">Dispositivos únicos</div><div class="n" id="kUnicos">0</div><div class="d" id="kRecurr">&nbsp;</div></div>
+    <div class="kpi a"><div class="l">Última conexión</div><div class="n s" id="kUlt">—</div><div class="d" id="kHoy">&nbsp;</div></div>
+    <div class="kpi"><div class="l">Hora de mayor tráfico</div><div class="n s" id="kPico">—</div><div class="d" id="kPicoN">&nbsp;</div></div>
+    <div class="kpi v"><div class="l">Edad más común</div><div class="n s" id="kEdad">—</div><div class="d" id="kEdadP">&nbsp;</div></div>
+    <div class="kpi a"><div class="l">Motivo principal</div><div class="n s" id="kMot">—</div><div class="d" id="kMotP">&nbsp;</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card c12"><h3>Conexiones por día</h3><div class="sub">Haz clic en un punto para ver solo ese día en la tabla</div><div class="cv"><canvas id="cDia"></canvas></div></div>
+  </div>
+  <div class="grid">
+    <div class="card c4"><h3>Género</h3><div class="sub">Clic en un segmento para filtrar</div><div class="cv"><canvas id="cGen"></canvas></div></div>
+    <div class="card c4"><h3>Rango de edad</h3><div class="sub">Clic en una barra para filtrar</div><div class="cv"><canvas id="cEdad"></canvas></div></div>
+    <div class="card c4"><h3>Motivos de visita</h3><div class="sub">Los 6 más frecuentes</div><div class="cv"><canvas id="cMot"></canvas></div></div>
+  </div>
+  <div class="grid">
+    <div class="card c12"><h3>Conexiones por hora del día</h3><div class="sub">Suma del periodo seleccionado. Clic en una hora para filtrar</div><div class="cv"><canvas id="cHora"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <div class="thead">
+      <div><h3>Registros</h3><div class="sub" id="tInfo" style="margin:0"></div></div>
+      <input type="search" id="buscar" placeholder="Buscar por MAC, IP, motivo…" aria-label="Buscar">
+    </div>
+    <div id="chips"></div>
+    <div class="tw"><table>
+      <thead><tr id="thr"></tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" class="empty">Cargando datos…</td></tr></tbody>
+    </table></div>
+    <div class="pager"><span id="pInfo"></span><div><button class="btn" id="prev">Anterior</button><button class="btn" id="next">Siguiente</button></div></div>
+  </div>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true"><div class="mbox" id="mbox"></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyD6LHQUYod7aDrtevXqDDCPnc70UUM2OPA",
+  authDomain:"formulario-conexion.firebaseapp.com",
+  databaseURL:"https://formulario-conexion-default-rtdb.firebaseio.com",
+  projectId:"formulario-conexion",
+  storageBucket:"formulario-conexion.firebasestorage.app",
+  messagingSenderId:"233272507133",
+  appId:"1:233272507133:web:f1be4e24e1a05ea2a9dc94",
+  measurementId:"G-2EGHGNKHW2"
+});
+const auth=firebase.auth(), db=firebase.database();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- Login ---------- */
+async function login(){
+  const email=$('loginEmail').value.trim(), pw=$('loginPassword').value, btn=$('loginBtn'), err=$('loginError');
+  if(!email||!pw){err.textContent='Ingresa tu correo y contraseña.';return}
+  btn.disabled=true;btn.textContent='Verificando…';err.textContent='';
+  try{await auth.signInWithEmailAndPassword(email,pw)}
+  catch(e){
+    console.error('Error de login:',e.code,e.message);
+    const bad=['auth/user-not-found','auth/wrong-password','auth/invalid-credential'];
+    err.textContent=bad.includes(e.code)?'Correo o contraseña incorrectos.':e.code==='auth/too-many-requests'?'Demasiados intentos. Espera un momento.':'No se pudo iniciar sesión (código: '+(e.code||e.message)+').';
+    btn.disabled=false;btn.textContent='Ingresar';
+  }
+}
+$('loginBtn').onclick=login;
+$('loginPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+$('btnOut').onclick=()=>auth.signOut().then(()=>location.reload());
+
+let started=false, ref=null;
+auth.onAuthStateChanged(u=>{
+  $('loginOverlay').style.display=u?'none':'flex';
+  $('dashboardContent').style.display=u?'block':'none';
+  if(u&&!started){started=true;start()}
+  if(!u&&ref){ref.off();ref=null;started=false}
+});
+
+/* ---------- Normalización de datos ---------- */
+const quita=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+function parseTs(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'||/^\d+$/.test(String(v))){let n=Number(v);if(n<1e11)n*=1000;return new Date(n)}
+  const d=new Date(v);return isNaN(d)?null:d;
+}
+function normGen(v){const s=quita(v);return s.startsWith('f')?'femenino':s.startsWith('m')?'masculino':'otro'}
+const EDADES=[['menor-18','<18'],['18-30','18-30'],['31-45','31-45'],['46-60','46-60'],['mayor-60','>60']];
+function normEdad(v){
+  const s=quita(v).replace(/\s/g,'');
+  if(!s)return '';
+  if(EDADES.some(e=>e[0]===s))return s;
+  if(/^\d+$/.test(s)){const n=+s;return n<18?'menor-18':n<=30?'18-30':n<=45?'31-45':n<=60?'46-60':'mayor-60'}
+  if(s.includes('<18')||s.includes('menor'))return 'menor-18';
+  if(s.includes('>60')||s.includes('mayor')||s.includes('60+'))return 'mayor-60';
+  return EDADES.find(e=>s.includes(e[0]))?.[0]||s;
+}
+const edadLbl=k=>(EDADES.find(e=>e[0]===k)||[,k||'—'])[1];
+const dkey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const fDia=d=>d.toLocaleDateString('es-CO',{day:'2-digit',month:'short'});
+const fHora=d=>d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+function normalizar(id,v){
+  v=v||{};
+  const ts=parseTs(v.timestamp??v.fecha??v.createdAt??v.hora);
+  const motivo=String(v.visita??v.motivo??'').trim();
+  return{id,ts,genero:normGen(v.genero??v.sexo),edad:normEdad(v.edad??v.rangoEdad),
+    motivo,mkey:quita(motivo).slice(0,40),mac:String(v.mac??v.MAC??'').toUpperCase(),ip:String(v.ip??v.IP??''),raw:v};
+}
+
+/* ---------- Estado ---------- */
+const S={all:[],f:{genero:null,edad:null,motivo:null,hora:null,dia:null},q:'',sort:{k:'ts',d:-1},page:0,per:10};
+const charts={};
+const COLS=[['ts','Fecha y hora'],['genero','Género'],['edad','Edad'],['motivo','Motivo'],['mac','MAC'],['ip','IP']];
+
+function start(){
+  const badge=$('liveBadge');
+  ref=db.ref('encuestas');
+  ref.on('value',snap=>{
+    const data=snap.val()||{};
+    S.all=Object.entries(data).map(([id,v])=>normalizar(id,v));
+    badge.className='live';
+    badge.textContent='En vivo · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    render();
+  },err=>{
+    console.error(err);
+    badge.className='live off';
+    badge.textContent=err.code==='PERMISSION_DENIED'?'Sin permiso de lectura':'Error de conexión';
+    $('tbody').innerHTML='<tr><td colspan="6" class="empty">No se pudieron leer los datos ('+esc(err.code||err.message)+'). Revisa las reglas de la base de datos.</td></tr>';
+  });
+}
+
+/* ---------- Cálculos ---------- */
+function enPeriodo(offset){
+  const dias=+$('periodo').value;
+  if(!dias)return offset?[]:S.all;
+  const fin=new Date();fin.setHours(23,59,59,999);
+  const ini=new Date();ini.setHours(0,0,0,0);ini.setDate(ini.getDate()-(dias-1));
+  const ms=dias*864e5, a=ini.getTime()-offset*ms, b=fin.getTime()-offset*ms;
+  return S.all.filter(r=>r.ts&&r.ts>=a&&r.ts<=b);
+}
+function contar(arr,fn){const m={};arr.forEach(r=>{const k=fn(r);if(k!==''&&k!=null)m[k]=(m[k]||0)+1});return m}
+const mayor=m=>Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+
+function render(){
+  const P=enPeriodo(0), prev=enPeriodo(1);
+  // KPIs
+  $('kTotal').textContent=P.length;
+  const dl=$('kDelta');
+  if(+$('periodo').value&&prev.length){
+    const p=Math.round((P.length-prev.length)/prev.length*100);
+    dl.innerHTML='<span class="'+(p>=0?'up':'down')+'">'+(p>=0?'▲ ':'▼ ')+Math.abs(p)+'%</span> vs. periodo anterior ('+prev.length+')';
+  }else dl.innerHTML='&nbsp;';
+  const macs=contar(P,r=>r.mac), u=Object.keys(macs).length, rec=Object.values(macs).filter(n=>n>1).length;
+  $('kUnicos').textContent=u;
+  $('kRecurr').textContent=rec?rec+' volvieron a conectarse':'Sin visitantes recurrentes';
+  const conTs=S.all.filter(r=>r.ts).sort((a,b)=>b.ts-a.ts);
+  $('kUlt').textContent=conTs[0]?fDia(conTs[0].ts)+', '+fHora(conTs[0].ts):'—';
+  const hoyK=dkey(new Date());
+  $('kHoy').textContent=conTs.filter(r=>dkey(r.ts)===hoyK).length+' conexiones hoy';
+  const horas=new Array(24).fill(0);P.forEach(r=>{if(r.ts)horas[r.ts.getHours()]++});
+  const mx=Math.max(...horas), hp=horas.indexOf(mx);
+  $('kPico').textContent=mx?hp+':00 – '+(hp+1)+':00':'—';
+  $('kPicoN').textContent=mx?mx+' conexiones':'';
+  const ce=contar(P,r=>r.edad), te=mayor(ce);
+  $('kEdad').textContent=te?edadLbl(te[0])+' años':'—';
+  $('kEdadP').textContent=te?Math.round(te[1]/P.length*100)+'% de los registros':'';
+  const cm=contar(P,r=>r.mkey), tm=mayor(cm);
+  const nombre=k=>(P.find(r=>r.mkey===k)||{}).motivo||k;
+  $('kMot').textContent=tm?nombre(tm[0]).slice(0,28):'—';
+  $('kMotP').textContent=tm?tm[1]+' registros':'';
+
+  // Gráficas
+  const cg=contar(P,r=>r.genero);
+  draw('cGen','doughnut',['Femenino','Masculino','Otro'],['femenino','masculino','otro'].map(k=>cg[k]||0),['#ec407a','#42a5f5','#ab47bc'],k=>setF('genero',['femenino','masculino','otro'][k]));
+  draw('cEdad','bar',EDADES.map(e=>e[1]),EDADES.map(e=>ce[e[0]]||0),'#eb7711',k=>setF('edad',EDADES[k][0]));
+  const tms=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  draw('cMot','bar',tms.map(x=>nombre(x[0]).slice(0,22)),tms.map(x=>x[1]),'#078930',k=>setF('motivo',tms[k][0]),true);
+  draw('cHora','bar',horas.map((_,i)=>i+':00'),horas,'#0f47af',k=>setF('hora',k));
+  // por día
+  const dias=[], porDia=contar(P,r=>dkey(r.ts));
+  if(P.length){
+    const f=P.filter(r=>r.ts).map(r=>r.ts.getTime());
+    let d=new Date(Math.min(...f));d.setHours(0,0,0,0);const fin=new Date(Math.max(...f));
+    while(d<=fin&&dias.length<400){dias.push(new Date(d));d.setDate(d.getDate()+1)}
+  }
+  draw('cDia','line',dias.map(fDia),dias.map(d=>porDia[dkey(d)]||0),'#eb7711',k=>setF('dia',dkey(dias[k])));
+  charts.cDia._dias=dias;
+  tabla();
+}
+
+function draw(id,type,labels,data,color,onClick,horiz){
+  let c=charts[id];
+  const multi=Array.isArray(color);
+  if(!c){
+    c=charts[id]=new Chart($(id).getContext('2d'),{type,data:{labels:[],datasets:[{data:[],borderRadius:4,tension:.3,fill:type==='line',pointRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:horiz?'y':'x',
+        plugins:{legend:{display:type==='doughnut',position:'bottom'}},
+        scales:type==='doughnut'?{}:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false}}},
+        onClick:(e,els)=>{if(els.length)c._cb(els[0].index)},
+        onHover:(e,els)=>{e.native.target.style.cursor=els.length?'pointer':'default'}}});
+  }
+  c._cb=onClick;
+  const ds=c.data.datasets[0];
+  c.data.labels=labels;ds.data=data;
+  ds.backgroundColor=multi?color:type==='line'?'rgba(235,119,17,.15)':color;
+  ds.borderColor=type==='line'?color:undefined;
+  c.update();
+}
+
+/* ---------- Filtros ---------- */
+function setF(k,v){S.f[k]=S.f[k]===v?null:v;S.page=0;tabla()}
+function nombreFiltro(k,v){
+  return k==='genero'?'Género: '+v:k==='edad'?'Edad: '+edadLbl(v):k==='hora'?'Hora: '+v+':00':k==='dia'?'Día: '+v:'Motivo: '+v;
+}
+function filtrar(){
+  const q=quita(S.q);
+  return enPeriodo(0).filter(r=>{
+    const f=S.f;
+    if(f.genero&&r.genero!==f.genero)return false;
+    if(f.edad&&r.edad!==f.edad)return false;
+    if(f.motivo&&r.mkey!==f.motivo)return false;
+    if(f.hora!=null&&(!r.ts||r.ts.getHours()!==f.hora))return false;
+    if(f.dia&&(!r.ts||dkey(r.ts)!==f.dia))return false;
+    if(q&&!quita([r.motivo,r.mac,r.ip,r.genero,edadLbl(r.edad)].join(' ')).includes(q))return false;
+    return true;
+  });
+}
+
+/* ---------- Tabla ---------- */
+function tabla(){
+  $('thr').innerHTML=COLS.map(([k,t])=>'<th data-k="'+k+'">'+t+(S.sort.k===k?' <span class="ar">'+(S.sort.d>0?'▲':'▼')+'</span>':'')+'</th>').join('');
+  $('chips').innerHTML=Object.entries(S.f).filter(([,v])=>v!=null).map(([k,v])=>
+    '<span class="chip">'+esc(nombreFiltro(k,v))+'<button data-x="'+k+'" aria-label="Quitar filtro">×</button></span>').join('');
+  const rows=filtrar(), {k,d}=S.sort;
+  rows.sort((a,b)=>{
+    const x=k==='ts'?(a.ts?+a.ts:0):a[k], y=k==='ts'?(b.ts?+b.ts:0):b[k];
+    return (x>y?1:x<y?-1:0)*d;
+  });
+  const pages=Math.max(1,Math.ceil(rows.length/S.per));
+  S.page=Math.min(S.page,pages-1);
+  const slice=rows.slice(S.page*S.per,S.page*S.per+S.per);
+  $('tbody').innerHTML=slice.map(r=>'<tr data-id="'+esc(r.id)+'"><td>'+(r.ts?fDia(r.ts)+' '+fHora(r.ts):'—')+
+    '</td><td><span class="tag t-'+r.genero+'">'+r.genero+'</span></td><td>'+esc(edadLbl(r.edad))+
+    '</td><td>'+esc(r.motivo.slice(0,40)||'—')+'</td><td class="mono">'+esc(r.mac||'—')+'</td><td class="mono">'+esc(r.ip||'—')+'</td></tr>').join('')
+    ||'<tr><td colspan="6" class="empty">No hay registros con estos filtros. Prueba otro periodo o quita algún filtro.</td></tr>';
+  $('tInfo').textContent=rows.length+' registros · clic en una fila para ver el detalle';
+  $('pInfo').textContent='Página '+(S.page+1)+' de '+pages;
+  $('prev').disabled=S.page===0;$('next').disabled=S.page>=pages-1;
+}
+$('thr').onclick=e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;S.sort=S.sort.k===k?{k,d:-S.sort.d}:{k,d:k==='ts'?-1:1};tabla()};
+$('chips').onclick=e=>{const b=e.target.closest('[data-x]');if(b){S.f[b.dataset.x]=null;S.page=0;tabla()}};
+$('prev').onclick=()=>{S.page--;tabla()};
+$('next').onclick=()=>{S.page++;tabla()};
+let t;$('buscar').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{S.q=e.target.value;S.page=0;tabla()},200)};
+$('periodo').onchange=()=>{S.page=0;render()};
+
+/* ---------- Detalle ---------- */
+$('tbody').onclick=e=>{
+  const tr=e.target.closest('tr[data-id]');if(!tr)return;
+  const r=S.all.find(x=>x.id===tr.dataset.id);if(!r)return;
+  const mismos=r.mac?S.all.filter(x=>x.mac===r.mac&&x.ts).sort((a,b)=>b.ts-a.ts):[];
+  const extra=Object.entries(r.raw).filter(([k])=>!['timestamp','genero','edad','visita','mac','ip'].includes(k));
+  $('mbox').innerHTML='<h3>Detalle del registro <button class="btn" id="mx">Cerrar</button></h3><dl>'+
+    '<dt>Fecha</dt><dd>'+(r.ts?r.ts.toLocaleString('es-CO',{dateStyle:'full',timeStyle:'short'}):'—')+'</dd>'+
+    '<dt>Género</dt><dd><span class="tag t-'+r.genero+'">'+r.genero+'</span></dd>'+
+    '<dt>Edad</dt><dd>'+esc(edadLbl(r.edad))+'</dd><dt>Motivo</dt><dd>'+esc(r.motivo||'—')+'</dd>'+
+    '<dt>MAC</dt><dd class="mono">'+esc(r.mac||'—')+'</dd><dt>IP</dt><dd class="mono">'+esc(r.ip||'—')+'</dd>'+
+    extra.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(typeof v==='object'?JSON.stringify(v):v)+'</dd>').join('')+
+    '<dt>ID</dt><dd class="mono">'+esc(r.id)+'</dd></dl>'+
+    (mismos.length>1?'<div class="hist"><b>Este dispositivo se ha conectado '+mismos.length+' veces.</b><br>Primera: '+fDia(mismos[mismos.length-1].ts)+' · Última: '+fDia(mismos[0].ts)+'</div>':
+     '<div class="hist">Primera vez que se registra este dispositivo.</div>');
+  $('modal').classList.add('on');$('mx').focus();
+  $('mx').onclick=cerrar;
+};
+const cerrar=()=>$('modal').classList.remove('on');
+$('modal').onclick=e=>{if(e.target.id==='modal')cerrar()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar()});
+
+/* ---------- CSV ---------- */
+$('btnCsv').onclick=()=>{
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const rows=filtrar().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const csv='\ufeffFecha,Género,Edad,Motivo,MAC,IP\n'+rows.map(r=>[r.ts?r.ts.toLocaleString('es-CO'):'',r.genero,edadLbl(r.edad),r.motivo,r.mac,r.ip].map(q).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='wifi-pamplonita-'+dkey(new Date())+'.csv';a.click();URL.revokeObjectURL(a.href);
+};
+</script>
+</body>
+</html>
